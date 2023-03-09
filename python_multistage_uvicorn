@@ -10,10 +10,7 @@ RUN python setup.py --quiet bdist_egg --exclude-source-files && wheel convert --
 
 FROM python:${PYTHON_VERSION} as main
 ENV PYTHONUNBUFFERED 1
-LABEL name="MCO"
-LABEL version="v1.0.0"
-LABEL author="Manik Sidana"
-LABEL description="MCO API Server."
+
 COPY --from=builder /root/.local /root/.local
 COPY --from=builder /ccp_server/dist  /ccp_server/dist
 COPY requirements.txt /tmp/requirements.txt
