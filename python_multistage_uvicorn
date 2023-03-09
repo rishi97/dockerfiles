@@ -1,0 +1,27 @@
+ARG PYTHON_VERSION=3.8-slim
+FROM python:${PYTHON_VERSION} as builder
+COPY requirements.txt /tmp/requirements.txt
+WORKDIR /ccp_server
+
+RUN pip install --upgrade pip && pip3 install --no-cache-dir --user -r /tmp/requirements.txt
+COPY . /ccp_server
+RUN python setup.py --quiet bdist_egg --exclude-source-files && wheel convert --verbose dist/*.egg --dest-dir dist   && rm -rf ./*.egg-info/  dist/*.egg build/lib  build/bdist*
+
+
+FROM python:${PYTHON_VERSION} as main
+ENV PYTHONUNBUFFERED 1
+LABEL name="MCO"
+LABEL version="v1.0.0"
+LABEL author="Manik Sidana"
+LABEL description="MCO API Server."
+COPY --from=builder /root/.local /root/.local
+COPY --from=builder /ccp_server/dist  /ccp_server/dist
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --upgrade pip && pip3 install --no-cache-dir --user -r /tmp/requirements.txt
+ENV PATH=/root/.local/bin:$PATH
+RUN pip install /ccp_server/dist/*
+RUN mkdir -p /etc/ccp
+COPY ccp_server/credentials/creds.json /etc/ccp/creds.json
+COPY ccp.yaml /etc/ccp/ccp.yaml
+EXPOSE 7080
+ENTRYPOINT ["uvicorn", "ccp_server.main:app", "--host", "0.0.0.0", "--port", "7080"]
